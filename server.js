@@ -19,7 +19,7 @@ var port = process.env.PORT || 3000;
 
 /** this project needs a db !! **/
 const MONGOLAB_URI =
-  "mongodb+srv://freecodecamp:Testing123@mycluster-wx9sp.mongodb.net/test?retryWrites=true&w=majority";
+  "mongodb://freecodecamp:Testing123@mycluster-wx9sp.mongodb.net/test?retryWrites=true&w=majority";
 mongoose.connect(MONGOLAB_URI, { useNewUrlParser: true }, function(error) {
   if (error) console.log(error);
 
@@ -30,7 +30,7 @@ mongoose.connect(MONGOLAB_URI, { useNewUrlParser: true }, function(error) {
 var db = mongoose.connection;
 
 //Bind connection to error event (to get notification of connection errors)
-db.on('error', console.error.bind(console, 'MongoDB connection error:'));
+db.on("error", console.error.bind(console, "MongoDB connection error:"));
 
 app.use(cors());
 
@@ -42,7 +42,7 @@ app.use("/public", express.static(process.cwd() + "/public"));
 
 var Schema = mongoose.Schema;
 
-const UrlCollectionSchema = new Schema({
+let UrlCollectionSchema = new Schema({
   url: String,
   id: Number
 });
@@ -56,37 +56,15 @@ app.post("/api/shorturl/new", function(req, res) {
   let url = req.body.url;
 
   console.log(url);
-  //   dns.lookup(url, options, function(err, address, family) {
-  //     if (err) {
-  //       res.json({ error: "Invalid URL" });
-  //     } else {
-  //       console.log("address: %j family: IPv%s", address, family);
-
-  //       let data = {
-  //         original_url: url,
-  //         short_url: 1
-  //       };
-
-  //       res.json(data);
-  //     }
-  //   });
-
-  // var schema = new mongoose.Schema({ name: "string", size: "string" });
-  // var Tank = mongoose.model("Tank", schema);
-  // var small = new Tank({ size: "small" });
-  // small.save(function(err) {
-  //   if (err) return res(err);
-  //   // saved!
-  // });
-
+  
   const newUrl = new UrlCollection({ url: url, id: 1 });
   newUrl.save(function(err, model) {
     //if (err) return err;
     // saved!
-    res.json(model);
+    //res.json(model);
   });
 
-  res.send("ok");
+  res.json(newUrl);
 });
 
 app.get("api/shorturl/:id", function(req, res) {
