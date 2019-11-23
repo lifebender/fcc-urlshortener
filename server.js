@@ -18,35 +18,23 @@ var app = express();
 var port = process.env.PORT || 3000;
 
 /** this project needs a db !! **/
-const MONGOLAB_URI =
-  "mongodb://freecodecamp:Testing123@mycluster-wx9sp.mongodb.net/test?retryWrites=true&w=majority";
-mongoose.connect(MONGOLAB_URI, { useNewUrlParser: true }, function(error) {
-  if (error) console.log(error);
-
-  console.log("connection successful");
-});
-
-//Get the default connection
-var db = mongoose.connection;
-
-//Bind connection to error event (to get notification of connection errors)
-db.on("error", console.error.bind(console, "MongoDB connection error:"));
+const MLAB_URI =
+  "mongodb://freecodecamp:Testing123@mycluster-shard-00-00-wx9sp.mongodb.net:27017,mycluster-shard-00-01-wx9sp.mongodb.net:27017,mycluster-shard-00-02-wx9sp.mongodb.net:27017/test?ssl=true&replicaSet=MyCluster-shard-0&authSource=admin&retryWrites=true&w=majority";
+mongoose.connect(MLAB_URI, { useNewUrlParser: true });
 
 app.use(cors());
 
 /** this project needs to parse POST bodies **/
 // you should mount the body-parser here
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 
 app.use("/public", express.static(process.cwd() + "/public"));
 
-var Schema = mongoose.Schema;
-
-let UrlCollectionSchema = new Schema({
+let UrlCollection = mongoose.model("UrlCollection", {
   url: String,
   id: Number
 });
-let UrlCollection = mongoose.model("UrlCollection", UrlCollectionSchema);
 
 app.get("/", function(req, res) {
   res.sendFile(process.cwd() + "/views/index.html");
@@ -55,23 +43,37 @@ app.get("/", function(req, res) {
 app.post("/api/shorturl/new", function(req, res) {
   let url = req.body.url;
 
-  console.log(url);
-  
-  const newUrl = new UrlCollection({ url: url, id: 1 });
-  newUrl.save(function(err, model) {
-    //if (err) return err;
-    // saved!
-    //res.json(model);
-  });
+  if (url === undefined) {
+    res.json({ error: "URL must be provided." });
+    return;
+  }
 
-  res.json(newUrl);
+  try {
+    url = new URL({ toString: () => url });
+  } catch (e) {
+    return res.json({ error: "invalid URL" });
+  }
+
+  console.log(url.hostname);
+
+  UrlCollection.count({}, function(err, count) {
+    if (err) return res.json(err);
+
+    const newUrl = new UrlCollection({ url: url, id: ++count });
+
+    newUrl.save(function(err, model) {
+      if (err) return res.json(err);
+
+      res.json(model);
+    });
+  });
 });
 
-app.get("api/shorturl/:id", function(req, res) {
+app.get("/api/shorturl/:id", function(req, res) {
   let id = req.params.id;
-  UrlCollectionSchema.find({ id: id }, function(err, model) {
+  UrlCollection.findOne({ id: parseInt(id) }, function(err, model) {
     if (err) {
-      res.json({ error: "ID Not found" });
+      res.json({ error: "No short url found for given input" });
     } else {
       res.redirect(model.url);
     }
